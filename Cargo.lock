@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "csv-parser"
-version = "0.1.0"
+name = "csvvy"
+version = "0.0.0"
