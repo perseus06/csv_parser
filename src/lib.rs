@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::Enumerate, str::Lines};
+use core::{iter::Enumerate, str::Lines};
 
 #[derive(Debug)]
 pub enum CsvValue {
@@ -15,18 +15,18 @@ fn handle_new_key(key: &str, len: usize) -> String {
         return format!("__{}", len + 1);
     }
 
-    trimmed_key.to_string()
+    trimmed_key.to_owned()
 }
 
 #[inline]
-fn parse_header(lines: &mut Enumerate<Lines>, seperator: &char) -> Option<Vec<String>> {
+fn parse_header(lines: &mut Enumerate<Lines>, seperator: char) -> Option<Vec<String>> {
     for (_, line) in lines {
         let mut keys = Vec::new();
 
         let mut current_key = String::new();
 
         for ch in line.chars() {
-            if &ch == seperator {
+            if ch == seperator {
                 keys.push(handle_new_key(&current_key, keys.len()));
 
                 current_key.clear();
@@ -58,11 +58,13 @@ mod test_parse_header {
         for seperator in SEPERATORS {
             let input = keys.join(&seperator.to_string());
 
-            let result = parse_header(&mut input.lines().enumerate(), &seperator)
+            let result = parse_header(&mut input.lines().enumerate(), seperator)
                 .expect("it to return a value");
 
             for i in 0..keys.len() {
-                assert_eq!(keys[i], result[i]);
+                let key = keys.get(i).expect("it to exist").trim();
+                let value = result.get(i).expect("it to exist");
+                assert_eq!(key, value);
             }
         }
     }
@@ -74,11 +76,13 @@ mod test_parse_header {
         for seperator in SEPERATORS {
             let input = keys.join(&seperator.to_string());
 
-            let result = parse_header(&mut input.lines().enumerate(), &seperator)
+            let result = parse_header(&mut input.lines().enumerate(), seperator)
                 .expect("it to return a value");
 
             for i in 0..keys.len() {
-                assert_eq!(keys[i].trim(), result[i]);
+                let key = keys.get(i).expect("it to exist").trim();
+                let value = result.get(i).expect("it to exist");
+                assert_eq!(key, value);
             }
         }
     }
@@ -90,11 +94,14 @@ mod test_parse_header {
         for seperator in SEPERATORS {
             let input = format!("\n\n\n{}", keys.join(&seperator.to_string()));
 
-            let result = parse_header(&mut input.lines().enumerate(), &seperator)
+            let result = parse_header(&mut input.lines().enumerate(), seperator)
                 .expect("it to return a value");
 
             for i in 0..keys.len() {
-                assert_eq!(keys[i].trim(), result[i]);
+                let key = keys.get(i).expect("it to exist").trim();
+                let value = result.get(i).expect("it to exist");
+
+                assert_eq!(key, value);
             }
         }
     }
@@ -125,10 +132,13 @@ mod test_parse_header {
 
             let mut lines = input.lines().enumerate();
 
-            let result = parse_header(&mut lines, &seperator).expect("it to return a value");
+            let result = parse_header(&mut lines, seperator).expect("it to return a value");
 
             for i in 0..keys.len() {
-                assert_eq!(keys[i], result[i])
+                assert_eq!(
+                    keys.get(i).expect("it to exist"),
+                    result.get(i).expect("it to exist")
+                );
             }
 
             for extra_line in extra_lines {
@@ -145,15 +155,14 @@ mod test_parse_header {
 
         for seperator in SEPERATORS {
             let sep_str = seperator.to_string();
-            println!("sep_str: '{sep_str}'");
 
             let input = fields.join(&sep_str);
 
-            let result = parse_header(&mut input.lines().enumerate(), &seperator)
+            let result = parse_header(&mut input.lines().enumerate(), seperator)
                 .expect("it to return a value");
 
             for i in 0..fields.len() {
-                assert_eq!(format!("__{}", i + 1), result[i]);
+                assert_eq!(&format!("__{}", i + 1), result.get(i).expect("it to exist"));
             }
         }
     }
@@ -175,7 +184,7 @@ fn parse_value(value: &str) -> Option<CsvValue> {
         return Some(CsvValue::Float(maybe_float));
     }
 
-    Some(CsvValue::Text(trimmed_line.to_string()))
+    Some(CsvValue::Text(trimmed_line.to_owned()))
 }
 
 #[cfg(test)]
@@ -202,7 +211,7 @@ mod test_parse_value {
         ];
 
         for value in values {
-            let result = parse_value(&value.to_string());
+            let result = parse_value(value);
 
             match result {
                 Some(CsvValue::Text(result_value)) => assert_eq!(value.trim(), result_value),
@@ -216,53 +225,40 @@ mod test_parse_value {
 
     #[test]
     fn it_should_understand_integers_values() {
-        let values = [-1, 0, 1, 2, 3, 4, 5];
+        let values: [i64; 7] = [-1, 0, 1, 2, 3, 4, 5];
 
         for value in values {
-            let result = parse_value(&value.to_string());
+            let result = parse_value(&value.to_string()).expect("it to be some");
 
-            match result {
-                Some(CsvValue::Integer(result_value)) => assert_eq!(value, result_value),
-                invalid_result => panic!(
-                    "expected it to return CsvValue::Integer({value}) but received '{invalid_result:?}'"
-                ),
-            }
+            assert!(matches!(result, CsvValue::Integer(v) if v == value));
         }
     }
 
     #[test]
     fn it_should_understand_floats_values() {
-        let values = [-1.1, 1.1, 2.22, 3.33, 4.44, 5.55];
+        let values: [f64; 6] = [-1.1, 1.1, 2.22, 3.33, 4.44, 5.55];
 
         for value in values {
-            match parse_value(&value.to_string()) {
-                Some(CsvValue::Float(result_value)) => assert_eq!(value, result_value),
-                invalid_result => {
-                    panic!(
-                        "expected it to return CsvValue::Float({value}) but received '{invalid_result:?}'"
-                    )
-                }
-            }
+            let result = parse_value(&value.to_string()).expect("it to be some");
+
+            assert!(matches!(result, CsvValue::Float(v) if (v - value).abs() < f64::EPSILON));
         }
     }
 
     #[test]
     fn zero_point_zero_should_be_a_float() {
-        match parse_value("0.0") {
-            Some(CsvValue::Float(value)) => assert_eq!(0.0, value),
-            invalid_result => panic!(
-                "expected it to return CsvValue::Float(0.0) but received '{invalid_result:?}'"
-            ),
-        };
+        let result = parse_value("0.0").expect("it to be some");
+
+        assert!(matches!(result, CsvValue::Float(value) if value == 0.0f64));
     }
 }
 
 #[inline]
 fn get_value_field(fields: &[String], index: usize) -> String {
-    fields
-        .get(index)
-        .map(|f| f.to_string())
-        .unwrap_or_else(|| format!("__{}", index + 1))
+    fields.get(index).map_or_else(
+        || format!("__{}", index + 1),
+        std::string::ToString::to_string,
+    )
 }
 
 #[cfg(test)]
@@ -272,28 +268,30 @@ mod test_get_value_field {
     #[test]
     fn it_should_generate_missing_fields() {
         let fields = vec![
-            "1".to_string(),
-            "2".to_string(),
-            "3".to_string(),
-            "4".to_string(),
-            "5".to_string(),
+            "1".to_owned(),
+            "2".to_owned(),
+            "3".to_owned(),
+            "4".to_owned(),
+            "5".to_owned(),
         ];
 
         for i in 0..fields.len() * 2 {
-            assert_eq!(
-                get_value_field(&fields, i),
-                if i < fields.len() {
-                    fields[i].clone()
-                } else {
-                    format!("__{}", i + 1)
-                }
-            )
+            let result = get_value_field(&fields, i);
+            if i < fields.len() {
+                assert_eq!(&result, fields.get(i).expect("it to be some"));
+            } else {
+                assert_eq!(result, format!("__{}", i + 1));
+            }
         }
     }
 }
 
 #[inline]
-fn parse_value_line(line: &str, seperator: char, fields: &[String]) -> HashMap<String, CsvValue> {
+fn parse_value_line(
+    line: &str,
+    seperator: char,
+    fields: &[String],
+) -> std::collections::HashMap<String, CsvValue> {
     let mut values = std::collections::HashMap::new();
 
     let mut current_value = String::new();
@@ -329,11 +327,11 @@ mod test_parse_value_line {
     #[test]
     fn it_should_parse_the_line() {
         let fields = vec![
-            "key 1".to_string(),
-            "key 2".to_string(),
-            "key 3".to_string(),
-            "key 4".to_string(),
-            "key 5".to_string(),
+            "key 1".to_owned(),
+            "key 2".to_owned(),
+            "key 3".to_owned(),
+            "key 4".to_owned(),
+            "key 5".to_owned(),
         ];
 
         let values = ["text", "", "1", "1.1", ""];
@@ -342,32 +340,27 @@ mod test_parse_value_line {
             let line = values.join(&sep.to_string());
 
             let result = parse_value_line(&line, sep, &fields);
-            println!("result:{result:?}");
 
-            match result.get(&fields[0]) {
-                Some(CsvValue::Text(result_value)) => assert_eq!(result_value, values[0]),
-                _ => panic!(),
-            };
+            let one = result
+                .get(fields.first().expect("it to be some"))
+                .expect("it to be some");
+            assert!(matches!(one, CsvValue::Text(result_value) if result_value == values[0]));
 
-            match result.get(&fields[1]) {
-                None => {}
-                _ => panic!(),
-            };
+            assert!(result.get(fields.get(1).expect("it to be some")).is_none());
 
-            match result.get(&fields[2]) {
-                Some(CsvValue::Integer(result_value)) => assert_eq!(*result_value, 1),
-                _ => panic!(),
-            };
+            let three = result
+                .get(fields.get(2).expect("it to be some"))
+                .expect("it to be some");
+            assert!(matches!(three, CsvValue::Integer(result_value) if *result_value == 1i64));
 
-            match result.get(&fields[3]) {
-                Some(CsvValue::Float(result_value)) => assert_eq!(*result_value, 1.1),
-                _ => panic!(),
-            };
+            let four = result
+                .get(fields.get(3).expect("it to be some"))
+                .expect("it to be some");
+            assert!(
+                matches!(four, CsvValue::Float(result_value) if (*result_value - 1.1f64).abs() < f64::EPSILON)
+            );
 
-            match result.get(&fields[4]) {
-                None => {}
-                _ => panic!(),
-            };
+            assert!(result.get(fields.get(4).expect("it to be some")).is_none());
         }
     }
 
@@ -381,47 +374,37 @@ mod test_parse_value_line {
             let line = values.join(&sep.to_string());
 
             let result = parse_value_line(&line, sep, &fields);
-            println!("result:{result:?}");
 
-            match result.get("__1") {
-                Some(CsvValue::Text(result_value)) => assert_eq!(result_value, values[0]),
-                _ => panic!(),
-            };
+            let one = result.get("__1").expect("it to be some");
+            assert!(matches!(one, CsvValue::Text(result_value) if result_value == values[0]));
 
-            match result.get("__2") {
-                None => {}
-                _ => panic!(),
-            };
+            assert!(result.get("__2").is_none());
 
-            match result.get("__3") {
-                Some(CsvValue::Integer(result_value)) => assert_eq!(*result_value, 1),
-                _ => panic!(),
-            };
+            let three = result.get("__3").expect("it to be some");
+            assert!(matches!(three, CsvValue::Integer(result_value) if *result_value == 1i64));
 
-            match result.get("__4") {
-                Some(CsvValue::Float(result_value)) => assert_eq!(*result_value, 1.1),
-                _ => panic!(),
-            };
+            let four = result.get("__4").expect("it to be some");
+            assert!(
+                matches!(four, CsvValue::Float(result_value) if (*result_value - 1.1f64).abs() < f64::EPSILON)
+            );
 
-            match result.get("__5") {
-                None => {}
-                _ => panic!(),
-            };
+            assert!(result.get("__5").is_none());
         }
     }
 }
 
-pub fn parse_csv(input: &str, seperator: char) -> Vec<HashMap<String, CsvValue>> {
+#[inline]
+pub fn parse_csv(input: &str, seperator: char) -> Vec<std::collections::HashMap<String, CsvValue>> {
     let mut output = Vec::new();
 
     let mut lines = input.lines().enumerate();
 
-    if let Some(fields) = parse_header(&mut lines, &seperator) {
+    if let Some(fields) = parse_header(&mut lines, seperator) {
         for (_, line) in lines {
             let trimmed_line = line.trim();
 
             if !trimmed_line.is_empty() {
-                output.push(parse_value_line(trimmed_line, seperator, &fields))
+                output.push(parse_value_line(trimmed_line, seperator, &fields));
             }
         }
     }
@@ -440,8 +423,8 @@ mod test_parse_csv {
         let fields = ["text", "integer", "float", "missng"];
 
         let text_values = ["   mads", "was    ", "    here   "];
-        let integer_values = [-1, 0, 2];
-        let float_values = [-1.1, 1.1, 2.2];
+        let integer_values: [i64; 3] = [-1, 0, 2];
+        let float_values: [f64; 3] = [-1.1, 1.1, 2.2];
 
         for seperator in SEPERATORS {
             let sep_str = seperator.to_string();
@@ -451,7 +434,9 @@ mod test_parse_csv {
             for i in 0..text_values.len() {
                 input.push_str(&format!(
                     "\n{}{seperator}{}{seperator}{}{seperator}",
-                    text_values[i], integer_values[i], float_values[i]
+                    text_values.get(i).expect("it to be some"),
+                    integer_values.get(i).expect("it to be some"),
+                    float_values.get(i).expect("it to be some")
                 ));
             }
 
@@ -460,36 +445,23 @@ mod test_parse_csv {
             assert_eq!(result.len(), text_values.len());
 
             for i in 0..text_values.len() {
-                let col = &result[i];
+                let col = &result.get(i).expect("it to be some");
 
-                match col.get(fields[0]) {
-                    Some(CsvValue::Text(value)) => assert_eq!(value, text_values[i].trim()),
-                    invalid_value => panic!(
-                        "Expected to CsvValue::Text({}), but received {invalid_value:?}",
-                        text_values[i].trim()
-                    ),
-                };
+                let zero = col.get(fields[0]).expect("it to be some");
+                let expected_string = text_values.get(i).expect("it to be some").trim();
+                assert!(matches!(zero, CsvValue::Text(value) if value == expected_string));
 
-                match col.get(fields[1]) {
-                    Some(CsvValue::Integer(value)) => assert_eq!(*value, integer_values[i]),
-                    invalid_value => panic!(
-                        "Expected to CsvValue::Integer({}), but received {invalid_value:?}",
-                        integer_values[i]
-                    ),
-                };
+                let one = col.get(fields[1]).expect("it to be some");
+                let expected_integer = integer_values.get(i).expect("it to be some");
+                assert!(matches!(one, CsvValue::Integer(value) if value == expected_integer));
 
-                match col.get(fields[2]) {
-                    Some(CsvValue::Float(value)) => assert_eq!(*value, float_values[i]),
-                    invalid_value => panic!(
-                        "Expected to CsvValue::Float({}), but received {invalid_value:?}",
-                        float_values[i]
-                    ),
-                };
+                let two = col.get(fields[2]).expect("it to be some");
+                let expected_float = float_values.get(i).expect("it to be some");
+                assert!(
+                    matches!(two, CsvValue::Float(value) if (value - expected_float).abs() < f64::EPSILON)
+                );
 
-                match col.get(fields[3]) {
-                    None => {}
-                    invalid_value => panic!("Expected to None, but received {invalid_value:?}"),
-                };
+                assert!(col.get(fields[3]).is_none());
             }
         }
     }
