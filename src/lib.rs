@@ -107,6 +107,16 @@ mod test_parse_header {
     }
 
     #[test]
+    fn it_should_return_none_if_empty_line() {
+        for seperator in SEPERATORS {
+            let input = String::new();
+            let mut lines = input.lines().enumerate();
+
+            assert!(parse_header(&mut lines, seperator).is_none());
+        }
+    }
+
+    #[test]
     fn it_should_not_touch_lines_after() {
         let keys = ["key 1", "key 2", "key 3", "key 4"];
 
@@ -211,15 +221,9 @@ mod test_parse_value {
         ];
 
         for value in values {
-            let result = parse_value(value);
+            let result = parse_value(value).expect("it to be some");
 
-            match result {
-                Some(CsvValue::Text(result_value)) => assert_eq!(value.trim(), result_value),
-                invalid_result => panic!(
-                    "expected it to return CsvValue::Text({}) but received '{invalid_result:?}'",
-                    value.trim()
-                ),
-            }
+            assert!(matches!(result, CsvValue::Text(v) if v == value.trim()));
         }
     }
 
