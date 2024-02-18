@@ -23,4 +23,4 @@ publish-crates:
 	cargo clean
 	cargo build --release
 
-	cargo publish -p cssvy
+	cargo publish -p csvvy
