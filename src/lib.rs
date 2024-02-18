@@ -19,14 +19,14 @@ fn handle_new_key(key: &str, len: usize) -> String {
 }
 
 #[inline]
-fn parse_header(lines: &mut Enumerate<Lines>, seperator: char) -> Option<Vec<String>> {
+fn parse_header(lines: &mut Enumerate<Lines>, separator: char) -> Option<Vec<String>> {
     for (_, line) in lines {
         let mut keys = Vec::new();
 
         let mut current_key = String::new();
 
         for ch in line.chars() {
-            if ch == seperator {
+            if ch == separator {
                 keys.push(handle_new_key(&current_key, keys.len()));
 
                 current_key.clear();
@@ -49,16 +49,16 @@ fn parse_header(lines: &mut Enumerate<Lines>, seperator: char) -> Option<Vec<Str
 mod test_parse_header {
     use crate::parse_header;
 
-    const SEPERATORS: [char; 3] = ['\t', ',', ';'];
+    const SEPARATORS: [char; 3] = ['\t', ',', ';'];
 
     #[test]
-    fn it_should_accept_any_seperator() {
+    fn it_should_accept_any_separator() {
         let keys = ["key 1", "key 2", "key 3", "key 4"];
 
-        for seperator in SEPERATORS {
-            let input = keys.join(&seperator.to_string());
+        for separator in SEPARATORS {
+            let input = keys.join(&separator.to_string());
 
-            let result = parse_header(&mut input.lines().enumerate(), seperator)
+            let result = parse_header(&mut input.lines().enumerate(), separator)
                 .expect("it to return a value");
 
             for i in 0..keys.len() {
@@ -73,10 +73,10 @@ mod test_parse_header {
     fn it_should_trim_spaces() {
         let keys = ["    key 1    ", " key 2 ", "  key 3        ", "   key 4   "];
 
-        for seperator in SEPERATORS {
-            let input = keys.join(&seperator.to_string());
+        for separator in SEPARATORS {
+            let input = keys.join(&separator.to_string());
 
-            let result = parse_header(&mut input.lines().enumerate(), seperator)
+            let result = parse_header(&mut input.lines().enumerate(), separator)
                 .expect("it to return a value");
 
             for i in 0..keys.len() {
@@ -91,10 +91,10 @@ mod test_parse_header {
     fn it_should_ignore_empty_lines() {
         let keys = ["key 1", "key 2", "key 3", "key 4"];
 
-        for seperator in SEPERATORS {
-            let input = format!("\n\n\n{}", keys.join(&seperator.to_string()));
+        for separator in SEPARATORS {
+            let input = format!("\n\n\n{}", keys.join(&separator.to_string()));
 
-            let result = parse_header(&mut input.lines().enumerate(), seperator)
+            let result = parse_header(&mut input.lines().enumerate(), separator)
                 .expect("it to return a value");
 
             for i in 0..keys.len() {
@@ -108,11 +108,11 @@ mod test_parse_header {
 
     #[test]
     fn it_should_return_none_if_empty_line() {
-        for seperator in SEPERATORS {
+        for separator in SEPARATORS {
             let input = String::new();
             let mut lines = input.lines().enumerate();
 
-            assert!(parse_header(&mut lines, seperator).is_none());
+            assert!(parse_header(&mut lines, separator).is_none());
         }
     }
 
@@ -120,8 +120,8 @@ mod test_parse_header {
     fn it_should_not_touch_lines_after() {
         let keys = ["key 1", "key 2", "key 3", "key 4"];
 
-        for seperator in SEPERATORS {
-            let mut input = keys.join(&seperator.to_string());
+        for separator in SEPARATORS {
+            let mut input = keys.join(&separator.to_string());
 
             let mut extra_lines = Vec::new();
 
@@ -130,7 +130,7 @@ mod test_parse_header {
 
                 for j in 0..keys.len() {
                     if j > 0 {
-                        current_line.push(seperator);
+                        current_line.push(separator);
                     }
 
                     current_line.push_str(&format!("value {i} {j}"));
@@ -142,7 +142,7 @@ mod test_parse_header {
 
             let mut lines = input.lines().enumerate();
 
-            let result = parse_header(&mut lines, seperator).expect("it to return a value");
+            let result = parse_header(&mut lines, separator).expect("it to return a value");
 
             for i in 0..keys.len() {
                 assert_eq!(
@@ -163,12 +163,12 @@ mod test_parse_header {
     fn it_should_generate_unknown_fields() {
         let fields = ["", "", "", "", ""];
 
-        for seperator in SEPERATORS {
-            let sep_str = seperator.to_string();
+        for separator in SEPARATORS {
+            let sep_str = separator.to_string();
 
             let input = fields.join(&sep_str);
 
-            let result = parse_header(&mut input.lines().enumerate(), seperator)
+            let result = parse_header(&mut input.lines().enumerate(), separator)
                 .expect("it to return a value");
 
             for i in 0..fields.len() {
@@ -293,7 +293,7 @@ mod test_get_value_field {
 #[inline]
 fn parse_value_line(
     line: &str,
-    seperator: char,
+    separator: char,
     fields: &[String],
 ) -> std::collections::HashMap<String, CsvValue> {
     let mut values = std::collections::HashMap::new();
@@ -303,7 +303,7 @@ fn parse_value_line(
     let mut index = 0;
 
     for ch in line.chars() {
-        if ch == seperator {
+        if ch == separator {
             if let Some(value) = parse_value(&current_value) {
                 values.insert(get_value_field(fields, index), value);
             }
@@ -326,7 +326,7 @@ fn parse_value_line(
 mod test_parse_value_line {
     use crate::{parse_value_line, CsvValue};
 
-    const SEPERATORS: [char; 3] = ['\t', ',', ';'];
+    const SEPARATORS: [char; 3] = ['\t', ',', ';'];
 
     #[test]
     fn it_should_parse_the_line() {
@@ -340,7 +340,7 @@ mod test_parse_value_line {
 
         let values = ["text", "", "1", "1.1", ""];
 
-        for sep in SEPERATORS {
+        for sep in SEPARATORS {
             let line = values.join(&sep.to_string());
 
             let result = parse_value_line(&line, sep, &fields);
@@ -374,7 +374,7 @@ mod test_parse_value_line {
 
         let values = ["text", "", "1", "1.1", ""];
 
-        for sep in SEPERATORS {
+        for sep in SEPARATORS {
             let line = values.join(&sep.to_string());
 
             let result = parse_value_line(&line, sep, &fields);
@@ -398,17 +398,17 @@ mod test_parse_value_line {
 }
 
 #[inline]
-pub fn parse_csv(input: &str, seperator: char) -> Vec<std::collections::HashMap<String, CsvValue>> {
+pub fn parse_csv(input: &str, separator: char) -> Vec<std::collections::HashMap<String, CsvValue>> {
     let mut output = Vec::new();
 
     let mut lines = input.lines().enumerate();
 
-    if let Some(fields) = parse_header(&mut lines, seperator) {
+    if let Some(fields) = parse_header(&mut lines, separator) {
         for (_, line) in lines {
             let trimmed_line = line.trim();
 
             if !trimmed_line.is_empty() {
-                output.push(parse_value_line(trimmed_line, seperator, &fields));
+                output.push(parse_value_line(trimmed_line, separator, &fields));
             }
         }
     }
@@ -420,7 +420,7 @@ pub fn parse_csv(input: &str, seperator: char) -> Vec<std::collections::HashMap<
 mod test_parse_csv {
     use crate::{parse_csv, CsvValue};
 
-    const SEPERATORS: [char; 3] = ['\t', ',', ';'];
+    const SEPARATORS: [char; 3] = ['\t', ',', ';'];
 
     #[test]
     fn it_should_be_able_to_parse_csv_files_with_integers() {
@@ -430,21 +430,21 @@ mod test_parse_csv {
         let integer_values: [i64; 3] = [-1, 0, 2];
         let float_values: [f64; 3] = [-1.1, 1.1, 2.2];
 
-        for seperator in SEPERATORS {
-            let sep_str = seperator.to_string();
+        for separator in SEPARATORS {
+            let sep_str = separator.to_string();
 
             let mut input = fields.join(&sep_str);
 
             for i in 0..text_values.len() {
                 input.push_str(&format!(
-                    "\n{}{seperator}{}{seperator}{}{seperator}",
+                    "\n{}{separator}{}{separator}{}{separator}",
                     text_values.get(i).expect("it to be some"),
                     integer_values.get(i).expect("it to be some"),
                     float_values.get(i).expect("it to be some")
                 ));
             }
 
-            let result = parse_csv(&input, seperator);
+            let result = parse_csv(&input, separator);
 
             assert_eq!(result.len(), text_values.len());
 
