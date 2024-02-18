@@ -20,4 +20,7 @@ publish-crates:
 	make build
 	make test
 
+	cargo clean
+	cargo build --release
+
 	cargo publish -p cssvy
