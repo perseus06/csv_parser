@@ -10,5 +10,6 @@ keywords = ["csv"]
 homepage = "https://github.com/hougesen/csvvy"
 readme = "README.md"
 categories = ["parser-implementations"]
+rust-version = "1.56"
 
 [dependencies]
