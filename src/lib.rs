@@ -350,7 +350,7 @@ mod test_parse_value_line {
                 .expect("it to be some");
             assert!(matches!(one, CsvValue::Text(result_value) if result_value == values[0]));
 
-            assert!(result.get(fields.get(1).expect("it to be some")).is_none());
+            assert!(!result.contains_key(fields.get(1).expect("it to be some")));
 
             let three = result
                 .get(fields.get(2).expect("it to be some"))
@@ -364,7 +364,7 @@ mod test_parse_value_line {
                 matches!(four, CsvValue::Float(result_value) if (*result_value - 1.1f64).abs() < f64::EPSILON)
             );
 
-            assert!(result.get(fields.get(4).expect("it to be some")).is_none());
+            assert!(!result.contains_key(fields.get(4).expect("it to be some")));
         }
     }
 
@@ -382,7 +382,7 @@ mod test_parse_value_line {
             let one = result.get("__1").expect("it to be some");
             assert!(matches!(one, CsvValue::Text(result_value) if result_value == values[0]));
 
-            assert!(result.get("__2").is_none());
+            assert!(!result.contains_key("__2"));
 
             let three = result.get("__3").expect("it to be some");
             assert!(matches!(three, CsvValue::Integer(result_value) if *result_value == 1i64));
@@ -392,7 +392,7 @@ mod test_parse_value_line {
                 matches!(four, CsvValue::Float(result_value) if (*result_value - 1.1f64).abs() < f64::EPSILON)
             );
 
-            assert!(result.get("__5").is_none());
+            assert!(!result.contains_key("__5"));
         }
     }
 }
