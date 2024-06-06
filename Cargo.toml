@@ -1,6 +1,6 @@
 [package]
 name = "csvvy"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 description = "a quick and dirty csv parser"
 authors = ["Mads Hougesen <mads@mhouge.dk>"]
